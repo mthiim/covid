@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+   <head>
+      <meta charset="utf-8">
+
+<!--
+MIT License
+
+Copyright (c) 2020 Martin Thiim (martin@thiim.net)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+
+      <title>Covid-19 status in Denmark by region</title>
+      <meta name="description" content="COVID-19 status in Denmark by region">
+      <link rel="stylesheet" type="text/css" href="style.css"/>
+   </head>
+   <body>
+      <h1>COVID-19 status in Denmark by regions</h1>
+      <p>This page shows time series data of COVID-19 infections country-wise and in the different Danish regions. The data has been smoothed using 7-day moving averages.
+      <p>Some graphs show the daily number of infected whereas others shows it normalized against population size (same measure as  Ministry of Foreign Affairs is using).
+      <p>The raw data is fetched directly from <a href="https://www.ssi.dk/sygdomme-beredskab-og-forskning/sygdomsovervaagning/c/covid19-overvaagning">Statens Serum Institut (SSI)</a> and will update when they publish a new file (usually happens on weekdays around 14).
+      <p>Note: Since the reported infections for a given date are often incomplete for 1-2 days, we ignore 2 days by default.<p>However, you can adjust here (0-10 days):
+      <input type="text" id="days" value="2" size="2" maxlength="2">
+      <p>Author: Martin Thiim (martin@thiim.net), 2020. Feel free to share, copy, reuse etc. under the <a href="https://opensource.org/licenses/MIT">MIT license</a>. Source code on <a href="https://github.com/mthiim/covid">GitHub</a>.
+      <p>Uses <a href="https://www.chartjs.org/">Chart.js</a> for showing the graphs and <a href="https://stuk.github.io/jszip/">JSZip</a> for unzipping the SSI data. 
+      <hr/>
+      <p id="csvfile">
+      <p id="dateinfo">
+      <div id="charts"></div>
+      <script src="dist/main.js"></script>
+   </body>
+</html>
