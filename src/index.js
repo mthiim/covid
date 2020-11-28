@@ -38,7 +38,7 @@ const chart_colors = ['#4dc9f6',
     '#58595b',
     '#8549ba'
 ];
-const regex_for_getting_ssi_link = /a href="(https:\/\/files.ssi.dk\/covid19\/overvagning\/data[^"]+)" target="_blank">/;
+const regex_for_getting_ssi_link = /a href="(https:\/\/files.ssi.dk\/covid19\/overvagning\/[^"]+)"/;
 
 /* Globals */
 let regions = null;
