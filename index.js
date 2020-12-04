@@ -22,9 +22,6 @@ SOFTWARE.
 */
 "use strict";
 
-import JSZip from 'jszip';
-import Chart from 'chart.js';
-
 /* Constants */
 const chart_width = "80vw";
 const chart_height = "40vw";
@@ -64,42 +61,29 @@ function sum(a, b) {
     return a + b;
 }
 
-/* Loads the data from SSI */
-async function load() {
+async function getCSVFromSSI() {
     // In the below we retrieve and process the SSI data, as well as our own file with region/muni link data in parallel
-
     // Here we build promise to get the SSI data. The link changes when a new file is published so we need to get fresh link using regex
-    const loading_csv_promise = fetch("https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata")
-        .then(ssipage => ssipage.text())
-        .then(ssitext => {
-            // Use regex to find the link
-            const res = regex_for_getting_ssi_link.exec(ssitext);
-            if (!res) {
-                throw "Couldn't find download link";
-            }
-            url = res[1];
-            return fetch(url);
-        })
-        .then(zipfile => zipfile.arrayBuffer())
-        .then(arraybuffer => {
-            const zipobj = new JSZip();
-            return zipobj.loadAsync(arraybuffer);
-        })
-        .then(zip => {
-            return zip.file("Municipality_cases_time_series.csv");
-        })
-        .then(csvfile => {
-            csvtimestamp = csvfile.date;
-            return csvfile.async("string");
-        });
+    let ssi_main_page = await fetch("https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata");
+    let ssi_main_text = await ssi_main_page.text();
 
-    // Promise for fetching the regions/muni data
-    const regions_munis_promise = fetch("regions_munis.json")
-        .then(res => res.json());
+    // Use regex to find the link
+    const res = regex_for_getting_ssi_link.exec(ssi_main_text);
+    if (!res) {
+        throw "Couldn't find download link";
+    }
+    url = res[1];
 
-    // Await all the data to become available   
-    let csvcontent;
-    [csvcontent, regions] = await Promise.all([loading_csv_promise, regions_munis_promise]);
+    let data_file = await fetch(url);
+    let zip_file = await JSZip.loadAsync(await data_file.arrayBuffer());
+    let csv_file = await zip_file.file("Municipality_cases_time_series.csv");
+    csvtimestamp = csv_file.date;
+    return csv_file.async("string");
+}
+
+async function getRegionsMunis() {
+    let regions_munis = await fetch("regions_munis.json");
+    let regions = await regions_munis.json();
 
     // Build a list of all munis
     const munis = {};
@@ -114,10 +98,33 @@ async function load() {
         region.munis = region.munis.map(muni => munis[muni.name]);
     });
 
+    return {
+        regions: regions,
+        munis: munis
+    };
+}
 
+/* Loads the data */
+async function load() {
+    // Do the two fetches (SSI data, and regions_munis daa) in parallel
+
+    // Get the CSV from SSI 
+    const loading_csv_promise = getCSVFromSSI();
+
+    // Promise for fetching the regions/muni data
+    const regions_munis_promise = getRegionsMunis();
+
+    // Await all the data to become available   
+    let csvcontent, regions_munis;
+    [csvcontent, regions_munis] = await Promise.all([loading_csv_promise, regions_munis_promise]);
+
+    regions = regions_munis.regions;
+    const munis = regions_munis.munis;
+
+    // Start processing CSV
     const line_generator = line_generator_from_text(csvcontent);
 
-    // Get muni headings from CSV (slice the first one away since this is 'Date')
+    // Get muni headings from CSV (slice the first one away since this is the 'Date' column header)
     const muni_headings_from_csv = line_generator.next().value.split(';').slice(1);
 
     // Skip the initial part from the file (we wanna start at 1/8)
@@ -144,6 +151,7 @@ async function load() {
 
             // Get muni structure and add data
             const muni = munis[muniname];
+            if (muni == null) return;
             if (!muni.data) {
                 muni.data = [];
             }
@@ -168,13 +176,32 @@ function reportError(e) {
     const csvfile_el = document.getElementById("csvfile");
     csvfile_el.innerHTML += '<p><b><font color="red">' + e + '</font></b>';
 }
+
 async function init() {
+    document.getElementById("days").addEventListener("change", update);
     try {
         await load();
     } catch (e) {
         reportError("Error initializing: " + e);
-        console.log("Error: " + e);
+        throw e;
     }
+}
+
+async function calculateRt(labels, region) {
+    let data = {
+        dates: labels,
+        data: region.avgdata
+    };
+    let response = await fetch("/rt", {
+        method: 'POST', // *GET, POST, PUT, DELETE, etc.
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data) // body data type must match "Content-Type" header
+    });
+
+    let res = response.json();
+    return res;
 }
 
 /* Refreshes the graphs (data must have been loaded, by load() ) */
@@ -228,9 +255,12 @@ async function update() {
         // Round both data sets
         region.avgdata = region.avgdata.map(round);
         region.avgdataweighted = region.avgdataweighted.map(round);
+
+        region.rt = calculateRt(labels, region).then(rtdata => rtdata.v);
     });
 
     labels.push(""); // Dummy label at the end - makes graph looks nicer
+
 
     // Now insert the charts!
     // First chart: The one with all regions
@@ -241,7 +271,8 @@ async function update() {
             data: region.avgdataweighted,
             fill: false,
             backgroundColor: chart_colors[i],
-            borderColor: chart_colors[i]
+            borderColor: chart_colors[i],
+            yAxisID: 'y1'
         };
         wdatasets.push(el);
     });
@@ -253,38 +284,59 @@ async function update() {
 
     insertChart("Summary all regions (infected per week per 100000 persons, 7-day moving average)", data, "Infected per week per 100,000 persons (7-day moving average)");
 
-    // Second set of charts: Individual regions with weighting
-    regions.forEach((region, i) => {
-        const data = {
-            datasets: [{
-                label: 'Infected',
-                data: region.avgdataweighted,
-                fill: false,
-                backgroundColor: chart_colors[i],
-                borderColor: chart_colors[i]
-            }],
-            labels: labels
-        };
-        insertChart(region.name + " (infected per week per 100000 persons as 7-day moving average)", data, "Infected per week per 100,000 persons (7-day moving average)");
-    });
+    /*
+        // Second set of charts: Individual regions with weighting
+        regions.forEach((region, i) => {
+            const data = {
+                datasets: [{
+                    label: 'Infected',
+                    data: region.avgdataweighted,
+                    fill: false,
+                    backgroundColor: chart_colors[i],
+                    borderColor: chart_colors[i],
+                    yAxisID: 'y1'
+                }],
+                labels: labels
+            };
+            insertChart(region.name + " (infected per week per 100000 persons as 7-day moving average)", data, "Infected per week per 100,000 persons (7-day moving average)");
+        });
+    */
 
     // Third set of charts: Individual regions without weighting
-    regions.forEach((region, i) => {
+    let i = 0;
+    // Note would have been tempting to use forEach with index, but it doesn't work so well since we need to await for the Rt calculation
+    // and we want the graphs in order, so instead we use for..of but it doesn't have index. So we need to track the index manually (via i).
+    for (const region of regions) {
+        const d = await region.rt;
         const data = {
             datasets: [{
-                label: 'Infected',
-                data: region.avgdata,
-                fill: false,
-                backgroundColor: chart_colors[i],
-                borderColor: chart_colors[i]
-            }],
+                    label: 'Infected',
+                    data: region.avgdata,
+                    fill: false,
+                    backgroundColor: chart_colors[i],
+                    borderColor: chart_colors[i],
+                    yAxisID: 'y1'
+                },
+                {
+                    label: 'Rt',
+                    data: d,
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    borderDash: [5, 5],
+                    fill: false,
+                    backgroundColor: '#000000',
+                    borderColor: '#000000',
+                    yAxisID: 'y2'
+                }
+            ],
             labels: labels
         };
-        insertChart(region.name + " (infected per day as 7-day moving average)", data, "Infected per day (7-day moving average)");
-    });
+        insertChart(region.name + " (infected per day as 7-day moving average)", data, "Infected per day (7-day moving average)", "Rt");
+        i++;
+    }
 }
 
-async function insertChart(title, data, yAxesLabel) {
+async function insertChart(title, data, yAxesLabel, y2AxesLabel) {
     const section = document.getElementById("charts");
 
     const header = document.createElement('h2');
@@ -303,32 +355,47 @@ async function insertChart(title, data, yAxesLabel) {
     const canvas = document.createElement('canvas');
     div.appendChild(canvas);
 
+
+    const yaxes = [];
+
+    yaxes.push({
+        display: true,
+        scaleLabel: {
+            display: true,
+            labelString: yAxesLabel
+        },
+        id: 'y1',
+        position: 'left'
+    });
+
+    if (y2AxesLabel) {
+        yaxes.push({
+            display: true,
+            scaleLabel: {
+                display: true,
+                labelString: y2AxesLabel
+            },
+            id: 'y2',
+            position: 'right'
+        });
+    }
+
+    let options = {
+        responsive: true,
+        scales: {
+            yAxes: yaxes
+        }
+    };
+
+
     const ctx = canvas.getContext('2d');
     const myLineChart = new Chart(ctx, {
         type: 'line',
         data: data,
-        options: {
-            responsive: true,
-            scales: {
-                xAxes: [{
-                    display: true,
-                    scaleLabel: {
-                        display: true,
-                        labelString: "Date"
-                    }
-                }],
-                yAxes: [{
-                    display: true,
-                    scaleLabel: {
-                        display: true,
-                        labelString: yAxesLabel
-                    }
-                }]
-            }
-        }
+        options: options
+
     });
 }
 
 /* Initialization code */
-document.getElementById("days").addEventListener("change", update);
 init();

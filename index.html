@@ -36,14 +36,18 @@ SOFTWARE.
       <p>This page shows time series data of COVID-19 infections country-wise and in the different Danish regions. The data has been smoothed using 7-day moving averages.
       <p>Some graphs show the daily number of infected whereas others shows it normalized against population size (same measure as  Ministry of Foreign Affairs is using).
       <p>The raw data is fetched directly from <a href="https://www.ssi.dk/sygdomme-beredskab-og-forskning/sygdomsovervaagning/c/covid19-overvaagning">Statens Serum Institut (SSI)</a> and will update when they publish a new file (usually happens on weekdays around 14).
+	  <p><b>New (December 5th)</b>: Now calculates the time-dependent reproduction number (Rt) as a dotted line (see numbers on right axis). This is new and experimental. It uses the R0 package from Wallinga & Teunis. I plan to add display of confidence intervals.
       <p>Note: Since the reported infections for a given date are often incomplete for 1-2 days, we ignore 2 days by default.<p>However, you can adjust here (0-10 days):
       <input type="text" id="days" value="2" size="2" maxlength="2">
       <p>Author: Martin Thiim (martin@thiim.net), 2020. Feel free to share, copy, reuse etc. under the <a href="https://opensource.org/licenses/MIT">MIT license</a>. Source code on <a href="https://github.com/mthiim/covid">GitHub</a>.
       <p>Uses <a href="https://www.chartjs.org/">Chart.js</a> for showing the graphs and <a href="https://stuk.github.io/jszip/">JSZip</a> for unzipping the SSI data. 
+      <p>Uses the <a href="https://www.chartjs.org/">R0</a> package for <a href="https://www.r-project.org/calculating">R</a> for calculating the reproduction numbers. Thanks to Icaro Ariel Simon for suggesting this package.
       <hr/>
       <p id="csvfile">
       <p id="dateinfo">
       <div id="charts"></div>
-      <script src="dist/main.js"></script>
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.5.0/jszip.min.js" integrity="sha512-y3o0Z5TJF1UsKjs/jS2CDkeHN538bWsftxO9nctODL5W40nyXIbs0Pgyu7//icrQY9m6475gLaVr39i/uh/nLA==" crossorigin="anonymous"></script>
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+      <script src="index.js"></script>
    </body>
 </html>
