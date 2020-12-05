@@ -44,7 +44,7 @@ SOFTWARE.
       <p>This page shows time series data of COVID-19 infections country-wise and in the different Danish regions. The data has been smoothed using 7-day moving averages.
       <p>Some graphs show the daily number of infected whereas others shows it normalized against population size (same measure as  Ministry of Foreign Affairs is using).
       <p>The raw data is fetched directly from <a href="https://www.ssi.dk/sygdomme-beredskab-og-forskning/sygdomsovervaagning/c/covid19-overvaagning">Statens Serum Institut (SSI)</a> and will update when they publish a new file (usually happens on weekdays around 14).
-	  <p><b>New (December 5th)</b>: Now calculates the time-dependent reproduction number (Rt) as a dotted line (see numbers on right axis). This is new and experimental. It uses the R0 package from Wallinga & Teunis. I plan to add display of confidence intervals.
+	  <p><b>New (December 5th)</b>: Now calculates the time-dependent reproduction number (Rt) shown as a dotted line (see scale on the right-hand side axis). This is new and experimental. It uses the R0 package from Wallinga & Teunis. I plan to add display of confidence intervals.
       <p>Note: Since the reported infections for a given date are often incomplete for 1-2 days, we ignore 2 days by default.<p>However, you can adjust here (0-10 days):
       <input type="text" id="days" value="2" size="2" maxlength="2">
       <p>Author: Martin Thiim (martin@thiim.net), 2020. Feel free to share, copy, reuse etc. under the <a href="https://opensource.org/licenses/MIT">MIT license</a>. Source code on <a href="https://github.com/mthiim/covid">GitHub</a>.

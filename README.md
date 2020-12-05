@@ -11,7 +11,7 @@ from a CDN.
 
 You can serve it from basically any web server, since it's just static files (however, see below).
 
-### Extra dependencies for R0 calculation
-Rt calculations have been experimentally added. To run this you need to also run a backend/backend.py which provides a simple API for calculating the number using R.
-You need to have installed Python3, the flask framework, R itself and the R0 package itself beforehand.
+### Extra dependencies for Rt calculation
+Calculations of the time-dependent reproduction number have been added experimentally. For this to work, you also need to run the backend component. It's a Python3 flask-based server: backend/backend.py. It provides a simple API for doing the calculation (it does that by using the R0 package in R).
+You need to have installed Python3, the flask framework, flask-cors, R itself and the R0 package itself before starting the server.
 

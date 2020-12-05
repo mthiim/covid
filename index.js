@@ -331,7 +331,7 @@ async function update() {
             ],
             labels: labels
         };
-        insertChart(region.name + " (infected per day as 7-day moving average, and estimated reproduction number)", data, "Infected per day (7-day moving average)", "Estimated reproduction number");
+        insertChart(region.name + " (infected per day as 7-day moving average, and estimated time-dependent reproduction number)", data, "Infected per day (7-day moving average)", "Estimated time-dependent reproduction number");
         i++;
     }
 }
