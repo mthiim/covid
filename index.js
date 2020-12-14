@@ -35,6 +35,13 @@ const chart_colors = ['#4dc9f6',
     '#58595b',
     '#8549ba'
 ];
+
+/* Population size in age groups (0-9, 10-19, ...) */
+const agegroup_dist = [611130, 680853, 779479, 693425, 751291, 801013, 666262, 572915, 235390, 45455];
+
+/* Age group names */
+const agegroup_names = ["0-9 years", "10-19 years", "20-29 years", "30-39 years", "40-49 years", "50-59 years", "60-69 years", "70-79 years", "80-90 years", "90+ years"];
+
 const regex_for_getting_ssi_link = /a href="(https:\/\/files.ssi.dk\/covid19\/overvagning\/[^"]+)"/;
 
 /* Globals */
@@ -42,6 +49,7 @@ let regions = null;
 let csvtimestamp = null;
 let dates = null;
 let url = null;
+let byAge = null;
 
 /* Utility function: Given a text, this function creates a generator that emits individual lines */
 function* line_generator_from_text(text) {
@@ -104,6 +112,71 @@ async function getRegionsMunis() {
     };
 }
 
+async function getByAge() {
+    // Initialize
+    const labels = [];
+    const data = [];
+    const wdata = [];
+    const wreldata = [];
+    const pop = agegroup_dist.reduce(sum, 0); // Whole pop size
+    for (let i = 0; i < 10; i++) {
+        data[i] = [];
+        wdata[i] = [];
+        wreldata[i] = [];
+    }
+
+    // Get data
+    const byage = await fetch("by_age.csv");
+    const byage_text = await byage.text();
+
+
+    // Parse CSV
+    byage_text.split("\n").forEach(line => {
+        const tok = line.split(",");
+        for (let i = 0; i < 10; i++) {
+            data[i].push(parseInt(tok[i + 1]));
+        }
+    });
+    const nl = data[0].length;
+    const nweeks = Math.trunc((nl + 4) / 5);
+    for (let i = 0; i < nweeks; i++) {
+        let wno = 32 + i;
+        const dataleft = data[0].length - 5 * i;
+        let labelstr = "Week " + wno;
+        if (dataleft < 5) {
+            labelstr += " (partial)";
+        }
+        labels.push(labelstr);
+        let allagesum = 0;
+        for (let j = 0; j < 10; j++) {
+            let tosum;
+            if (dataleft < 5) {
+                tosum = data[j].slice(data[j] - 5);
+            } else {
+                tosum = data[j].slice(5 * i, 5 * i + 5);
+            }
+            let res = tosum.reduce(sum);
+            allagesum += res;
+            res /= agegroup_dist[j];
+            res *= 100000;
+            wdata[j].push(round(res));
+        }
+
+        // Now calculate the relative rates
+        let allagerate = 100000 * (allagesum / pop);
+        for (let j = 0; j < 10; j++) {
+            const lastel = wdata[j][wdata[j].length - 1];
+            wreldata[j].push(round(lastel / allagerate));
+        }
+
+    }
+    return {
+        labels: labels,
+        data: wdata,
+        reldata: wreldata
+    };
+}
+
 /* Loads the data */
 async function load() {
     // Do the two fetches (SSI data, and regions_munis daa) in parallel
@@ -113,6 +186,9 @@ async function load() {
 
     // Promise for fetching the regions/muni data
     const regions_munis_promise = getRegionsMunis();
+
+    // Get by age data
+    byAge = getByAge();
 
     // Await all the data to become available   
     let csvcontent, regions_munis;
@@ -140,7 +216,7 @@ async function load() {
 
         // Format is: <date>;<muni1-number>;<muni2-number>, ...
         const tokens = line.split(";");
-        let date = tokens[0];
+        dates.push(tokens[0]);
 
         // Process the muni numbers (slice to get rid of date)
         tokens.slice(1).forEach((tok, i) => {
@@ -157,9 +233,7 @@ async function load() {
             }
             muni.data.push(c);
         });
-        dates.push(date);
     }
-
 
     // Sum up data for each region, for each date
     regions.forEach(region => {
@@ -281,31 +355,53 @@ async function update() {
         datasets: wdatasets,
         labels: labels
     };
+    insertChart("Infection rate by region (infected per week per 100,000 persons, 7-day moving average)", data, "Infected per week per 100,000 persons (7-day moving average)");
 
-    insertChart("Summary all regions (infected per week per 100000 persons, 7-day moving average)", data, "Infected per week per 100,000 persons (7-day moving average)");
+    // Now insert the by-age charts
+    const by_age_dataset = await byAge;
+    const by_age_data = by_age_dataset.data;
+    const wbyage = [];
+    by_age_data.forEach((d, i) => {
+        let el = {
+            label: agegroup_names[i],
+            data: d,
+            fill: false,
+            backgroundColor: chart_colors[i],
+            borderColor: chart_colors[i],
+            yAxisID: 'y1'
+        };
+        wbyage.push(el);
+    });
 
-    /*
-        // Second set of charts: Individual regions with weighting
-        regions.forEach((region, i) => {
-            const data = {
-                datasets: [{
-                    label: 'Infected',
-                    data: region.avgdataweighted,
-                    fill: false,
-                    backgroundColor: chart_colors[i],
-                    borderColor: chart_colors[i],
-                    yAxisID: 'y1'
-                }],
-                labels: labels
-            };
-            insertChart(region.name + " (infected per week per 100000 persons as 7-day moving average)", data, "Infected per week per 100,000 persons (7-day moving average)");
-        });
-    */
+    const agedata = {
+        datasets: wbyage,
+        labels: by_age_dataset.labels
+    };
+    insertChart("Infection rate by age group (infected per week per 100,000 persons, 7-day moving average)", agedata, "Infected per week per 100,000 persons (7-day moving average)");
 
-    // Third set of charts: Individual regions without weighting
+    // Now insert the relative by-age charts
+    const by_age_rel_data = by_age_dataset.reldata;
+    const wbyage_rel = [];
+    by_age_rel_data.forEach((d, i) => {
+        let el = {
+            label: agegroup_names[i],
+            data: d,
+            fill: false,
+            backgroundColor: chart_colors[i],
+            borderColor: chart_colors[i],
+            yAxisID: 'y1'
+        };
+        wbyage_rel.push(el);
+    });
+
+    const agedata_rel = {
+        datasets: wbyage_rel,
+        labels: by_age_dataset.labels
+    };
+    insertChart("Relative infection rate by age group (i.e. group compared to average rate for all ages)", agedata_rel, "Relative infection rate");
+
+    // Individual regions without weighting
     let i = 0;
-    // Note would have been tempting to use forEach with index, but it doesn't work so well since we need to await for the Rt calculation
-    // and we want the graphs in order, so instead we use for..of but it doesn't have index. So we need to track the index manually (via i).
     for (const region of regions) {
         const d = await region.rt;
         const data = {
