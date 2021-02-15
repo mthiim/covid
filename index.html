@@ -41,11 +41,12 @@ SOFTWARE.
    </head>
    <body>
       <h1>COVID-19 status in Denmark by regions</h1>
-      <p>This page shows time series data of COVID-19 infections country-wise and in the different Danish regions. The data has been smoothed using 7-day moving averages.
+      <p>This page shows time series data of COVID-19 infections country-wide and in the different Danish regions. The data has been smoothed using 7-day moving averages.
       <p>Some graphs show the daily number of infected whereas others shows it normalized against population size (same measure as  Ministry of Foreign Affairs is using).
       <p>The raw data is fetched directly from <a href="https://www.ssi.dk/sygdomme-beredskab-og-forskning/sygdomsovervaagning/c/covid19-overvaagning">Statens Serum Institut (SSI)</a> and will update when they publish a new file (usually happens on weekdays around 14).
 	  <p><b>New (December 5th)</b>: Now calculates the time-dependent reproduction number (Rt) shown as a dotted line (see scale on the right-hand side axis). This is new and experimental. It uses the R0 package from Wallinga & Teunis. I plan to add display of confidence intervals.
-	  <p><b>New (December 14th)</b>: Now shows the infection rate across different age groups (including relative rates), updated population municipality data (previous numbers were quite low, so the rate for e.g. Copenhagen is lower now - relatively speaking the numbers are the same over time of course).
+	  <p><b>New (December 14th)</b>: Now shows the infection rate across different age groups (including relative rates), updated population municipality data.
+	  <p><b>New (December 29th)</b>: Note when comparing my Rt numbers to the official ones: It seems the official "contact numbers" in the news (today 1.2) are now calculated differently than before. Note in their latest graph, Rt is now never below 1 (even though they announced e.g. 0.9 on the 22th of December). It seems they have switched to using hospitalizations for the calculation instead, thereby introducing a long delay (1-2 weeks), maybe due to uncertainty in test numbers around the holidays.  Also note, that the by-age graphs are temporarily disabled, since the corresponding data sheet from SSI is irregularly updated over Christmas (and unlike the other data, is not published as a time-series).
       <p>Note: Since the reported infections for a given date are often incomplete for 1-2 days, we ignore 2 days by default.<p>However, you can adjust here (0-10 days):
       <input type="text" id="days" value="2" size="2" maxlength="2">
       <p>Author: Martin Thiim (martin@thiim.net), 2020. Feel free to share, copy, reuse etc. under the <a href="https://opensource.org/licenses/MIT">MIT license</a>. Source code on <a href="https://github.com/mthiim/covid">GitHub</a>.

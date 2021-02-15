@@ -41,8 +41,8 @@ const agegroup_dist = [611130, 680853, 779479, 693425, 751291, 801013, 666262, 5
 
 /* Age group names */
 const agegroup_names = ["0-9 years", "10-19 years", "20-29 years", "30-39 years", "40-49 years", "50-59 years", "60-69 years", "70-79 years", "80-90 years", "90+ years"];
-
 const regex_for_getting_ssi_link = /a href="(https:\/\/files.ssi.dk\/covid19\/overvagning\/[^"]+)"/;
+const ssi_page_url = "https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata";
 
 /* Globals */
 let regions = null;
@@ -72,7 +72,7 @@ function sum(a, b) {
 async function getCSVFromSSI() {
     // In the below we retrieve and process the SSI data, as well as our own file with region/muni link data in parallel
     // Here we build promise to get the SSI data. The link changes when a new file is published so we need to get fresh link using regex
-    let ssi_main_page = await fetch("https://covid19.ssi.dk/overvagningsdata/download-fil-med-overvaagningdata");
+    let ssi_main_page = await fetch(ssi_page_url);
     let ssi_main_text = await ssi_main_page.text();
 
     // Use regex to find the link
@@ -204,7 +204,7 @@ async function load() {
     const muni_headings_from_csv = line_generator.next().value.split(';').slice(1);
 
     // Skip the initial part from the file (we wanna start at 1/8)
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 242; i++) {
         line_generator.next();
     }
 
@@ -373,6 +373,7 @@ async function update() {
         wbyage.push(el);
     });
 
+/*
     const agedata = {
         datasets: wbyage,
         labels: by_age_dataset.labels
@@ -399,6 +400,7 @@ async function update() {
         labels: by_age_dataset.labels
     };
     insertChart("Relative infection rate by age group (i.e. group compared to average rate for all ages)", agedata_rel, "Relative infection rate");
+*/
 
     // Individual regions without weighting
     let i = 0;
